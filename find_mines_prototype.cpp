@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include <windows.h>
 #include <stdio.h>
 #include <iostream>
@@ -8,7 +6,7 @@ using namespace std;
 
 
 int main(void) {
-	LPWSTR path_to_exe = L"C:\\study\\devdays\\Minesweeper\\build-minesweeper-Desktop_Qt_5_6_2_MSVC2015_64bit-Release\\release\\Minesweeper.exe";
+	LPWSTR path_to_exe = L"C:\\Users\\lesya\\Downloads\\Minesweeper-master\\Minesweeper-master\\build-minesweeper-Desktop_Qt_5_8_0_MSVC2015_64bit-Debug\\debug\\Minesweeper.exe";
 
 	STARTUPINFO info = { sizeof(info) };
 	PROCESS_INFORMATION processInfo;
