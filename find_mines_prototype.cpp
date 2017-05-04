@@ -89,12 +89,10 @@ int main(void) {
 					cout << dec << "Probably mine in cell x=" << x << ", y=" << y << endl;
 					cout << hex << idx + (uint64_t)(cur_mem_addr) << endl;
 					unsigned char* buffer_write = new unsigned char[17]();
-					//memset(buffer_write, 0, sizeof(buffer_write));
 					buffer_write[0] = y;
 					buffer_write[4] = x;
 					buffer_write[8] = 1;
 					buffer_write[15] = 1;
-					buffer_write[16] = 1;
 					if (x != 2 && y != 2) {
 						if (!WriteProcessMemory(proc_handle, (void *)(idx + (uint64_t)cur_mem_addr), buffer_write, 17, NULL))
 							printf("WriteProcess failed (%d).\n", GetLastError());
