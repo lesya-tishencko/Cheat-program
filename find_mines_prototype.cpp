@@ -1,27 +1,51 @@
 #include <comdef.h>
+#include <TlHelp32.h>
 #include <windows.h>
 #include <stdio.h>
 #include <iostream>
 
 using namespace std;
 
-int main(void) {
-	//freopen("output.txt", "w", stdout);
-	LPWSTR path_to_exe = L"C:\\Users\\lesya\\Downloads\\Minesweeper-master\\Minesweeper-master\\build-minesweeper-Desktop_Qt_5_8_0_MSVC2015_64bit-Debug\\debug\\Minesweeper.exe";
+size_t find_minesweeper_pid()
+{
+	HANDLE processes = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	
 
-	STARTUPINFO info = { sizeof(info) };
-	PROCESS_INFORMATION processInfo;
-	if (!CreateProcess(path_to_exe, L"", NULL, NULL, TRUE, PROCESS_VM_WRITE | PROCESS_VM_OPERATION, NULL, NULL, &info, &processInfo))
+	PROCESSENTRY32 cur_entry;
+	cur_entry.dwSize = sizeof(cur_entry);
+	size_t result_pid = 0;
+
+	if (Process32First(processes, &cur_entry)) 
 	{
-		cout << "Failed to start process" << endl;
-		return 1;
+		do
+		{
+			if (wcscmp(cur_entry.szExeFile, L"Minesweeper.exe") == 0) {
+				result_pid = cur_entry.th32ProcessID;
+			}
+		} while (Process32Next(processes, &cur_entry));
 	}
 
+	CloseHandle(processes);
+
+	return result_pid;
+}
+
+
+int main(void) {
+	size_t pid = find_minesweeper_pid();
+
+	HANDLE proc_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+
+	if (proc_handle == 0) 
+	{
+		cout << "Opening process failed with error #" << GetLastError() << endl;
+		return 0;
+	}
+	
 
 	SYSTEM_INFO s_info;
 	GetNativeSystemInfo(&s_info);
-
-	HANDLE proc_handle = processInfo.hProcess;
+	
 	void* cur_mem_addr = (void*)0;
 
 	int field_width = 50;
@@ -31,6 +55,7 @@ int main(void) {
 	{
 		Sleep(1000);
 		cur_mem_addr = 0;
+
 		while (cur_mem_addr < s_info.lpMaximumApplicationAddress)
 		{
 			MEMORY_BASIC_INFORMATION mem_info;
@@ -41,10 +66,6 @@ int main(void) {
 			}
 			cur_mem_addr = mem_info.BaseAddress;
 
-			//cout << "Current address: " << cur_mem_addr << endl;
-			//cout << "\tregion size: " << mem_info.RegionSize << endl;
-
-			
 			uint64_t reg_size = mem_info.RegionSize;
 			uint64_t max_mem = static_cast<uint64_t>(1e8);
 			if (reg_size > max_mem) {
@@ -59,16 +80,16 @@ int main(void) {
 				goto loop_end;
 			}
 
-			const int pat_length = 17;
+			const int pat_length = 20;
 			char pattern[pat_length + 3];
 			memset(pattern, 0, sizeof(pattern));
 			pattern[15] = 1;
-			pattern[16] = 0; // TODO: make it zero after debug.
-							 // Search for 
-							 // 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 <-- just indices, for convenience.
-							 // y 0 0 0 x 0 0 0 0 0 0  0  0  0  0  1  0
-							 // (17 characters in total).
-							 // If this is found, then a mine is *probably* set at (x, y).
+			pattern[16] = 0;
+			// Search for 
+			// 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 <-- just indices, for convenience.
+			// y 0 0 0 x 0 0 0 0 0 0  0  0  0  0  1  0
+			// (17 characters in total).
+			// If this is found, then a mine is *probably* set at (x, y).
 			for (size_t idx = 0; idx < reg_size; idx++) {
 				if (idx + pat_length >= reg_size)
 					break;
@@ -82,19 +103,25 @@ int main(void) {
 					size_t mem_shifted_idx = idx + shift;
 					if (shift == 0 || shift == 4) // indices of `y` and `x`.
 						continue;
-					found_correctly &= pattern[shift] == buffer[mem_shifted_idx];
+					if (shift > 16)
+						found_correctly &= buffer[mem_shifted_idx] > 200;
+					else
+						found_correctly &= pattern[shift] == buffer[mem_shifted_idx];
 				}
+
 
 				if (found_correctly)
 				{
-					cout << dec << "Probably mine in cell x=" << x << ", y=" << y << endl;
-					cout << hex << idx + (uint64_t)(cur_mem_addr) << endl;
+					uint64_t cell_addr = idx + (uint64_t)(cur_mem_addr);
+					cout << dec << "Mine in cell x=" << x << ", y=" << y << endl;
+					cout << hex << cell_addr << endl;
 					unsigned char* buffer_write = new unsigned char[17]();
+					memset(buffer_write, 0, 17 * sizeof(*buffer_write));
 					buffer_write[0] = y;
 					buffer_write[4] = x;
 					buffer_write[8] = 1;
 					buffer_write[15] = 1;
-					if (!WriteProcessMemory(proc_handle, (void *)(idx + (uint64_t)cur_mem_addr), buffer_write, 17, NULL))
+					if (!WriteProcessMemory(proc_handle, (void *)cell_addr, buffer_write, 17, NULL))
 						printf("WriteProcess failed (%d).\n", GetLastError());
 					delete[] buffer_write;
 				}
@@ -109,9 +136,6 @@ int main(void) {
 	}
 
 hell:
-	WaitForSingleObject(processInfo.hProcess, INFINITE);
-	//TerminateProcess(processInfo.hProcess, 0);
-	CloseHandle(processInfo.hProcess);
-	CloseHandle(processInfo.hThread);
+	CloseHandle(proc_handle);
 	return 0;
 }
