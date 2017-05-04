@@ -21,85 +21,86 @@ int main(void) {
 		return 1;
 	}
 
-	Sleep(1000);
-	
 
 	SYSTEM_INFO s_info;
 	GetNativeSystemInfo(&s_info);
 
-	cout << s_info.lpMaximumApplicationAddress << endl;
-
 	HANDLE proc_handle = processInfo.hProcess;
 	void* cur_mem_addr = (void*)0;
 
-	int field_width = 16;
-	int field_height = 30;
+	int field_width = 50;
+	int field_height = 50;
 
-
-	while (cur_mem_addr < s_info.lpMaximumApplicationAddress)
+	while (true)
 	{
-		MEMORY_BASIC_INFORMATION mem_info;
-		if (!VirtualQueryEx(proc_handle, cur_mem_addr, &mem_info, sizeof(mem_info)))
+		Sleep(1000);
+		cur_mem_addr = 0;
+
+		while (cur_mem_addr < s_info.lpMaximumApplicationAddress)
 		{
-			cout << "Failed to get info about memory " << GetLastError() << endl;
-			goto hell;
-		}
-		cur_mem_addr = mem_info.BaseAddress;
-		//cout << "Current address: " << cur_mem_addr << endl;
-		//cout << "\tregion size: " << mem_info.RegionSize << endl;
-		uint64_t reg_size = mem_info.RegionSize;
-		uint64_t max_mem = static_cast<uint64_t>(1e8);
-		if (reg_size > max_mem) {
-			reg_size = max_mem;
-		}
-
-		unsigned char* buffer = new unsigned char[reg_size];
-		
-		if (!ReadProcessMemory(proc_handle, cur_mem_addr, buffer, reg_size, NULL))
-		{
-			reg_size = mem_info.RegionSize;
-			goto loop_end;
-		}
-
-		const int pat_length = 17;
-		char pattern[pat_length + 3];
-		memset(pattern, 0, sizeof(pattern));
-		pattern[15] = 1;
-		pattern[16] = 1; // TODO: make it zero after debug.
-		// Search for 
-		// 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 <-- just indices, for convenience.
-		// y 0 0 0 x 0 0 0 0 0 0  0  0  0  0  1  0
-		// (17 characters in total).
-		// If this is found, then a mine is *probably* set at (x, y).
-		for (size_t idx = 0; idx < reg_size; idx++) {
-			if (idx + pat_length >= reg_size)
-				break;
-
-			unsigned y = buffer[idx];
-			unsigned x = buffer[idx + 4];
-
-			bool found_correctly = (1 <= x && x <= field_width) && (1 <= y && y <= field_height);
-
-			for (size_t shift = 0; found_correctly && shift < pat_length; shift++) {
-				size_t mem_shifted_idx = idx + shift;
-				if (shift == 0 || shift == 4) // indices of `y` and `x`.
-					continue;
-				found_correctly &= pattern[shift] == buffer[mem_shifted_idx];
-			}
-
-			if (found_correctly)
+			MEMORY_BASIC_INFORMATION mem_info;
+			if (!VirtualQueryEx(proc_handle, cur_mem_addr, &mem_info, sizeof(mem_info)))
 			{
-				// TODO: we want to find actual mines, not "no mines".
-				cout << dec << "Probably no mine in cell x=" << x << ", y=" << y << endl;
-				cout << hex << idx + (uint64_t)(cur_mem_addr) << endl;
+				cout << "Failed to get info about memory " << GetLastError() << endl;
+				goto hell;
 			}
+			cur_mem_addr = mem_info.BaseAddress;
+			//cout << "Current address: " << cur_mem_addr << endl;
+			//cout << "\tregion size: " << mem_info.RegionSize << endl;
+			uint64_t reg_size = mem_info.RegionSize;
+			uint64_t max_mem = static_cast<uint64_t>(1e8);
+			if (reg_size > max_mem) {
+				reg_size = max_mem;
+			}
+
+			unsigned char* buffer = new unsigned char[reg_size];
+
+			if (!ReadProcessMemory(proc_handle, cur_mem_addr, buffer, reg_size, NULL))
+			{
+				reg_size = mem_info.RegionSize;
+				goto loop_end;
+			}
+
+			const int pat_length = 17;
+			char pattern[pat_length + 3];
+			memset(pattern, 0, sizeof(pattern));
+			pattern[15] = 1;
+			pattern[16] = 0; // TODO: make it zero after debug.
+			// Search for 
+			// 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 <-- just indices, for convenience.
+			// y 0 0 0 x 0 0 0 0 0 0  0  0  0  0  1  0
+			// (17 characters in total).
+			// If this is found, then a mine is *probably* set at (x, y).
+			for (size_t idx = 0; idx < reg_size; idx++) {
+				if (idx + pat_length >= reg_size)
+					break;
+
+				unsigned y = buffer[idx];
+				unsigned x = buffer[idx + 4];
+
+				bool found_correctly = (1 <= x && x <= field_width) && (1 <= y && y <= field_height);
+
+				for (size_t shift = 0; found_correctly && shift < pat_length; shift++) {
+					size_t mem_shifted_idx = idx + shift;
+					if (shift == 0 || shift == 4) // indices of `y` and `x`.
+						continue;
+					found_correctly &= pattern[shift] == buffer[mem_shifted_idx];
+				}
+
+				if (found_correctly)
+				{
+					// TODO: we want to find actual mines, not "no mines".
+					cout << dec << "Probably a mine in cell x=" << x << ", y=" << y << endl;
+					cout << hex << idx + (uint64_t)(cur_mem_addr) << endl;
+				}
+			}
+
+		loop_end:
+			delete[] buffer;
+
+			cur_mem_addr = (LPVOID)((char*)mem_info.BaseAddress +
+				reg_size);
 		}
-
-loop_end:
-		delete[] buffer;
-
-		cur_mem_addr = (LPVOID)((char*)mem_info.BaseAddress +
-			reg_size);
 	}
 
 hell:
