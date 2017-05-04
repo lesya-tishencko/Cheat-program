@@ -1,6 +1,3 @@
 [submodule "tools/PINCE"]
 	path = tools/PINCE
 	url = https://github.com/korcankaraokcu/PINCE
-[submodule "chocolate-doom"]
-	path = chocolate-doom
-	url = git@github.com:chocolate-doom/chocolate-doom.git
