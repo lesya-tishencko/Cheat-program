@@ -5,8 +5,6 @@
 
 using namespace std;
 
-
-
 int main(void) {
 	//freopen("output.txt", "w", stdout);
 	LPWSTR path_to_exe = L"C:\\Users\\lesya\\Downloads\\Minesweeper-master\\Minesweeper-master\\build-minesweeper-Desktop_Qt_5_8_0_MSVC2015_64bit-Debug\\debug\\Minesweeper.exe";
@@ -42,8 +40,11 @@ int main(void) {
 				goto hell;
 			}
 			cur_mem_addr = mem_info.BaseAddress;
+
 			//cout << "Current address: " << cur_mem_addr << endl;
 			//cout << "\tregion size: " << mem_info.RegionSize << endl;
+
+			
 			uint64_t reg_size = mem_info.RegionSize;
 			uint64_t max_mem = static_cast<uint64_t>(1e8);
 			if (reg_size > max_mem) {
