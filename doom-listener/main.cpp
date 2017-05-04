@@ -18,7 +18,8 @@ void debug(const T &x) {
 //long ptrace(enum __ptrace_request request, pid_t pid, void *addr, void *data);
 
 #define PLAYER_MEMORY 0x754540
-#define HEALTH_MEMORY 0x75456c
+//#define HEALTH_MEMORY 0x75456c
+#define HEALTH_MEMORY 0x7533ec
 #define INCREASE_HEALTH_BUTTON 'i'
 #define ERR_OK 0
 #define WORD_BYTES (WORD_BIT/8)
