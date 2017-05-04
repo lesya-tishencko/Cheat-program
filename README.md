@@ -16,6 +16,7 @@
 - Windows 10
 - Miscrosoft Visual Studio 2015
 - QtCreator 5.6
+
 Для начала, нужно собрать Minesweeper. Мы это делали с помощью QtCreator с компилятором MSVS 2015. Для этого в файле Minesweeper/src/minesweeper.pro нужно удалить строчки:
 ```
 QMAKE_CXX=clang++
