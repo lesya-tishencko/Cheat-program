@@ -1,3 +1,4 @@
+#include <comdef.h>
 #include <windows.h>
 #include <stdio.h>
 #include <iostream>
@@ -16,16 +17,38 @@ int main(void) {
 		return 1;
 	}
 
+	/*
+	HMODULE module_handle = GetModuleHandle(path_to_exe);
+	if (!module_handle) 
+	{
+		cout << "Failed to get module handle" << endl;
+		cout << GetLastError() << endl;
+		_com_error err(GetLastError());
+		LPCTSTR errorText = err.ErrorMessage();
+		cout << "err: " << errorText << endl;
+		goto hell;
+	}
+	cout << module_handle << endl;
+	
+	goto hell;
+	*/
+	
+
 	SYSTEM_INFO s_info;
 	GetNativeSystemInfo(&s_info);
 
 	cout << s_info.lpMaximumApplicationAddress << endl;
 
 	HANDLE proc_handle = processInfo.hProcess;
-	void* cur_mem_addr = 0;
+	void* cur_mem_addr = (void*)0x140000000;
 
-	int field_width = 5;
-	int field_height = 5;
+	int field_width = 9;
+	int field_height = 9;
+
+	uint64_t val;
+	cin >> hex >> val;
+	cur_mem_addr = (void*)val;
+	cout << cur_mem_addr << endl;
 
 	while (cur_mem_addr < s_info.lpMaximumApplicationAddress)
 	{
@@ -37,11 +60,27 @@ int main(void) {
 		}
 		cur_mem_addr = mem_info.BaseAddress;
 		cout << "Current address: " << cur_mem_addr << endl;
-
-		char* buffer = new char[mem_info.RegionSize];
-		ReadProcessMemory(proc_handle, cur_mem_addr, buffer, mem_info.RegionSize, NULL);
 		cout << "\tregion size: " << mem_info.RegionSize << endl;
-		for (int idx = 0; idx < mem_info.RegionSize; idx++) {
+		uint64_t reg_size = mem_info.RegionSize;
+		uint64_t max_mem = static_cast<uint64_t>(1e8);
+		if (reg_size > max_mem) {
+			reg_size = max_mem;
+		}
+
+		char* buffer = new char[reg_size];
+		
+		if (!ReadProcessMemory(proc_handle, cur_mem_addr, buffer, reg_size, NULL))
+		{
+			cout << "Failed to read process memory" << endl;
+			cout << GetLastError() << endl;
+			goto hell;
+		}
+
+		for (int idx = 0; idx < reg_size; idx++) {
+			const int pat_length = 17;
+			char pattern[pat_length + 3];
+			memset(pattern, 0, sizeof(pattern));
+
 			for (int y = 1; y <= field_height; y++) {
 				for (int x = 1; x <= field_width; x++) {
 					// Search for 
@@ -49,17 +88,14 @@ int main(void) {
 					// y 0 0 0 x 0 0 0 0 0 0  0  0  0  0  1  0
 					// (17 characters in total).
 					// If this is found, then a mine is *probably* set at (x, y).
-					const int pat_length = 17;
-					char pattern[pat_length];
-					memset(pattern, 0, sizeof(pattern));
 					pattern[0] = y;
 					pattern[4] = x;
 					pattern[15] = 1;
-					pattern[16] = 1; // TODO: make it zero after debug.
+					pattern[16] = 0; // TODO: make it zero after debug.
 					bool found_correctly = true;
 					for (int shift = 0; found_correctly && shift < pat_length; shift++) {
 						int mem_shifted_idx = idx + shift;
-						if (mem_shifted_idx >= mem_info.RegionSize) {
+						if (mem_shifted_idx >= reg_size) {
 							found_correctly = false;
 							break;
 						}
@@ -68,7 +104,9 @@ int main(void) {
 
 					if (found_correctly)
 					{
-						cout << "Probable mine in cell x=" << x << ", y=" << y << endl;
+						// TODO: we want to find actual mines, not "no mines".
+						cout << dec << "Probably mine in cell x=" << x << ", y=" << y << endl;
+						cout << hex << idx + (uint64_t)(cur_mem_addr) << endl;
 					}
 				}
 			}
@@ -77,7 +115,7 @@ int main(void) {
 		delete[] buffer;
 
 		cur_mem_addr = (LPVOID)((char*)mem_info.BaseAddress +
-			mem_info.RegionSize);
+			reg_size);
 	}
 
 hell:
