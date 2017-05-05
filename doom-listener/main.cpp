@@ -33,7 +33,7 @@ word_t get_word(pid_t pid, uintptr_t addr) {
     int32_t next_word = ptrace(PTRACE_PEEKDATA, pid, addr);
     err_code = ptrace(PTRACE_DETACH, pid, NULL, NULL);
     assert(err_code == ERR_OK);
-
+    return next_word;
 }
 
 // returns error_code
@@ -90,7 +90,7 @@ int parent(pid_t pid) {
                 else if (line.back() == '-') {
                     if (cur_health > HEALTH_STEP) {
                         cur_health -= HEALTH_STEP;
-                        change_word(pid, health_addr, cur_health);
+                        assert(change_word(pid, health_addr, cur_health) == ERR_OK);
                     }
                 }
             }
