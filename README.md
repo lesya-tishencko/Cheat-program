@@ -34,4 +34,10 @@ QMAKE_CXXFLAGS += --std=c++11
 
 
 ### Doom
-TODO
+1. Собрать **chocolate-doom** согласно инструкциям в `chocolate-doom/README.md`
+2. Собрать **doom-listener** с помощью cd doom-listener && qmake && make
+3. Запустить chocolate-doom
+4. Запустить doom-listener и использовать команды **h+**, **h-**, **gm on**, **gm off** для изменения характеристик игрока.
+
+#### Пример установки и использования
+Требуемая система Ubuntu 16.04, [ссылка](https://www.youtube.com/watch?v=DwFvRwnDvAM&feature=youtu.be).
