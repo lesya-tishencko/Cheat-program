@@ -1,6 +1,3 @@
-[submodule "Minesweeper"]
-	path = Minesweeper
-	url = https://github.com/sochka/Minesweeper.git
 [submodule "tools/PINCE"]
 	path = tools/PINCE
 	url = https://github.com/korcankaraokcu/PINCE
