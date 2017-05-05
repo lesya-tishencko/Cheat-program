@@ -4,3 +4,6 @@
 [submodule "chocolate-doom"]
 	path = chocolate-doom
 	url = git@github.com:kravtsun/chocolate-doom.git
+[submodule "Minesweeper"]
+	path = Minesweeper
+	url = git@github.com:kravtsun/Minesweeper.git
